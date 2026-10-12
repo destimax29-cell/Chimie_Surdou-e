@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chimie du Non_Homme</title>
+<style>
+:root{--bg:#0f1720;--card:#18232f;--tx:#e8eef4;--mu:#8fa3b5;--ac:#35d0a0;--er:#ff6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;padding-bottom:70px}
+header{padding:16px;text-align:center;font-weight:700;font-size:20px;color:var(--ac)}
+main{padding:0 14px;max-width:700px;margin:auto}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:14px;background:none;border:0;color:var(--mu);font-size:15px}
+nav button.on{color:var(--ac);font-weight:700}
+input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #2c3e50;background:var(--card);color:var(--tx);font-size:16px;margin:6px 0}
+button.b{background:var(--ac);color:#04251c;border:0;padding:12px 18px;border-radius:10px;font-weight:700;font-size:16px;margin:4px 4px 4px 0}
+button.g{background:#2c3e50;color:var(--tx)}
+.c{background:var(--card);border-radius:12px;padding:12px;margin:8px 0}
+.c b{color:var(--ac)}
+.q{font-size:19px;line-height:1.4;min-height:110px}
+.hud{display:flex;justify-content:space-between;color:var(--mu);font-size:18px}
+.t{font-size:34px;font-weight:800;color:var(--ac)}
+.ok{color:var(--ac)}.ko{color:var(--er)}
+.sec{display:none}.sec.on{display:block}
+small{color:var(--mu)}
+</style>
+</head>
+<body>
+<header>⚗️ Chimie du Non_Homme</header>
+<main>
+
+<section id="lex" class="sec on">
+  <input id="s" placeholder="Rechercher un terme ou un mot de la définition…">
+  <small id="n"></small>
+  <div id="list"></div>
+</section>
+
+<section id="ch" class="sec">
+  <div id="start" class="c">
+    <p>60 secondes, questions en rafale, parties illimitées. Écris le terme défini puis valide.</p>
+    <button class="b" onclick="play()">▶ Lancer</button>
+    <button class="b g" id="snd" onclick="toggleSnd()">🔊 Son : oui</button>
+  </div>
+  <div id="game" style="display:none">
+    <div class="hud"><span class="t" id="tm">60</span><span>Score : <b id="sc">0</b></span></div>
+    <div class="c q" id="q"></div>
+    <input id="a" placeholder="Ta réponse…" autocomplete="off" autocapitalize="off" autocorrect="off">
+    <button class="b" onclick="submit()">Valider</button>
+    <button class="b g" onclick="skip()">Passer</button>
+    <div id="fb"></div>
+  </div>
+  <div id="end" class="c" style="display:none"></div>
+</section>
+
+<section id="ad" class="sec">
+  <div class="c">
+    <b>Ajouter un terme</b>
+    <input id="nt" placeholder="Terme (variantes acceptées : terme|variante)">
+    <textarea id="nd" rows="3" placeholder="Définition"></textarea>
+    <button class="b" onclick="addOne()">Ajouter</button>
+  </div>
+  <div class="c">
+    <b>Ajout en masse</b><br><small>Une ligne par terme : <code>terme :: définition</code></small>
+    <textarea id="bulk" rows="6"></textarea>
+    <button class="b" onclick="addBulk()">Importer</button>
+  </div>
+  <div class="c"><b>Mes termes ajoutés</b><div id="mine"></div></div>
+</section>
+
+</main>
+<nav>
+  <button class="on" onclick="tab('lex',this)">📖 Lexique</button>
+  <button onclick="tab('ch',this)">⏱ Challenge</button>
+  <button onclick="tab('ad',this)">➕ Ajouter</button>
+</nav>
+
+<script>
+const BASE=`atome :: Plus petite particule d'un élément chimique, constituée d'un noyau (protons et neutrons) entouré d'électrons.
+molécule :: Assemblage électriquement neutre d'atomes liés par des liaisons covalentes.
+élément chimique :: Ensemble d'atomes (et d'ions) ayant le même nombre de protons dans leur noyau.
+corps pur :: Substance constituée d'une seule espèce chimique.
+composé :: Corps pur formé d'atomes d'au moins deux éléments différents.
+mélange homogène :: Mélange dont les constituants ne sont pas distinguables à l'œil nu.
+mélange hétérogène :: Mélange dont les constituants sont visibles à l'œil nu.
+alliage :: Mélange homogène à propriétés métalliques, formé d'un métal et d'un ou plusieurs autres éléments.
+ion :: Atome ou groupe d'atomes portant une charge électrique, par gain ou perte d'électrons.
+cation :: Ion chargé positivement.
+anion :: Ion chargé négativement.
+isotope :: Atome d'un même élément ayant le même nombre de protons mais un nombre de neutrons différent.
+numéro atomique :: Nombre de protons d'un noyau, noté Z.
+nombre de masse :: Nombre total de nucléons (protons et neutrons) d'un noyau, noté A.
+nucléon :: Particule constituant le noyau : proton ou neutron.
+électron de valence :: Électron de la couche électronique la plus externe d'un atome.
+couche électronique :: Niveau d'énergie sur lequel se répartissent les électrons autour du noyau.
+orbitale :: Région de l'espace où la probabilité de trouver un électron est maximale.
+tableau périodique :: Classement des éléments chimiques par numéro atomique croissant, en périodes et en groupes.
+période :: Ligne horizontale du tableau périodique.
+groupe :: Colonne verticale du tableau périodique réunissant des éléments aux propriétés voisines.
+métal :: Élément bon conducteur de chaleur et d'électricité, qui tend à former des cations.
+non-métal :: Élément mauvais conducteur, qui tend à gagner des électrons pour former des anions.
+métalloïde :: Élément aux propriétés intermédiaires entre celles des métaux et des non-métaux.
+gaz noble|gaz rare :: Élément du groupe 18, chimiquement très peu réactif car sa couche externe est saturée.
+halogène :: Élément du groupe 17 (fluor, chlore, brome, iode…).
+métal alcalin :: Élément du groupe 1, hors hydrogène, très réducteur et très réactif avec l'eau.
+alcalino-terreux :: Élément du groupe 2 du tableau périodique.
+électronégativité :: Aptitude d'un atome à attirer vers lui les électrons d'une liaison.
+liaison covalente :: Liaison dans laquelle deux atomes partagent une ou plusieurs paires d'électrons.
+liaison ionique :: Attraction électrostatique entre un cation et un anion.
+liaison métallique :: Liaison due à la mise en commun d'électrons délocalisés entre atomes métalliques.
+liaison hydrogène :: Interaction attractive entre un H lié à un atome très électronégatif (O, N, F) et un doublet non liant d'une autre molécule.
+mole|mol :: Unité de quantité de matière contenant 6,02·10²³ entités élémentaires.
+nombre d'Avogadro :: Nombre d'entités dans une mole : 6,02·10²³ mol⁻¹.
+masse molaire :: Masse d'une mole d'entités chimiques, exprimée en g/mol.
+volume molaire :: Volume occupé par une mole de gaz dans des conditions données de température et de pression.
+solution :: Mélange homogène obtenu par dissolution d'un ou plusieurs solutés dans un solvant.
+solvant :: Espèce chimique, en général liquide et majoritaire, qui dissout le soluté.
+soluté :: Espèce chimique dissoute dans un solvant.
+solubilité :: Quantité maximale de soluté que l'on peut dissoudre dans un volume donné de solvant.
+solution saturée :: Solution qui ne peut plus dissoudre de soluté à une température donnée.
+dissolution :: Passage d'une espèce chimique dans un solvant pour former une solution.
+dilution :: Opération consistant à diminuer la concentration d'une solution en y ajoutant du solvant.
+concentration molaire :: Quantité de matière de soluté par litre de solution, en mol/L.
+concentration massique :: Masse de soluté par litre de solution, en g/L.
+acide :: Espèce chimique capable de céder un proton H⁺ (Brønsted).
+base :: Espèce chimique capable de capter un proton H⁺ (Brønsted).
+couple acide-base :: Ensemble d'un acide et de sa base conjuguée, reliés par l'échange d'un proton.
+ampholyte|espèce amphotère :: Espèce pouvant se comporter à la fois comme un acide et comme une base.
+pH :: Grandeur sans unité mesurant l'acidité d'une solution : pH = −log [H₃O⁺].
+acide fort :: Acide qui réagit totalement avec l'eau.
+base forte :: Base qui réagit totalement avec l'eau.
+solution tampon :: Solution dont le pH varie peu par ajout modéré d'acide, de base ou par dilution.
+neutralisation :: Réaction entre un acide et une base qui forme de l'eau et un sel.
+sel :: Composé ionique résultant de la neutralisation d'un acide par une base.
+titrage :: Technique de dosage qui détermine une concentration par une réaction chimique totale et rapide.
+point d'équivalence|équivalence :: Moment d'un titrage où les réactifs ont été mélangés dans les proportions stœchiométriques.
+indicateur coloré :: Espèce chimique dont la couleur change selon le pH de la solution.
+produit ionique de l'eau :: Constante Ke = [H₃O⁺][HO⁻], égale à 10⁻¹⁴ à 25 °C.
+réaction chimique :: Transformation au cours de laquelle des espèces disparaissent et d'autres se forment.
+réactif :: Espèce chimique consommée au cours d'une réaction.
+produit :: Espèce chimique formée au cours d'une réaction.
+réactif limitant :: Réactif entièrement consommé en premier, qui arrête la réaction.
+stœchiométrie :: Étude des proportions dans lesquelles les espèces réagissent et se forment.
+rendement :: Rapport entre la quantité de produit réellement obtenue et la quantité maximale théorique.
+équilibre chimique :: État où les vitesses des réactions directe et inverse sont égales et les concentrations constantes.
+loi de Le Chatelier :: Tout système à l'équilibre soumis à une perturbation évolue de manière à s'opposer à celle-ci.
+catalyseur :: Espèce qui accélère une réaction sans être consommée.
+inhibiteur :: Espèce qui ralentit une réaction chimique.
+énergie d'activation :: Énergie minimale à fournir aux réactifs pour déclencher une réaction.
+cinétique chimique :: Étude de la vitesse des réactions et des facteurs qui l'influencent.
+exothermique :: Se dit d'une transformation qui libère de la chaleur.
+endothermique :: Se dit d'une transformation qui absorbe de la chaleur.
+enthalpie :: Fonction d'état qui mesure l'énergie échangée sous forme de chaleur à pression constante.
+entropie :: Grandeur mesurant le degré de désordre d'un système.
+oxydant :: Espèce capable de capter un ou plusieurs électrons.
+réducteur :: Espèce capable de céder un ou plusieurs électrons.
+oxydation :: Perte d'électrons par une espèce chimique.
+réduction :: Gain d'électrons par une espèce chimique.
+oxydoréduction|réaction d'oxydoréduction :: Réaction avec transfert d'électrons entre un réducteur et un oxydant.
+nombre d'oxydation :: Charge fictive d'un atome si tous les électrons de ses liaisons étaient attribués à l'atome le plus électronégatif.
+anode :: Électrode où a lieu l'oxydation.
+cathode :: Électrode où a lieu la réduction.
+électrolyte :: Substance dont la solution ou le liquide fondu conduit le courant par déplacement d'ions.
+électrolyse :: Transformation forcée par un courant électrique imposé de l'extérieur.
+pile :: Dispositif convertissant l'énergie chimique d'une réaction d'oxydoréduction en énergie électrique.
+corrosion :: Dégradation d'un métal par oxydation due à son environnement.
+combustion :: Réaction d'oxydation vive d'un combustible par un comburant, avec dégagement de chaleur.
+comburant :: Espèce qui permet la combustion d'un combustible, généralement le dioxygène.
+hydrocarbure :: Composé organique formé uniquement de carbone et d'hydrogène.
+alcane :: Hydrocarbure saturé, de formule CₙH₂ₙ₊₂.
+alcène :: Hydrocarbure comportant au moins une double liaison C=C.
+alcyne :: Hydrocarbure comportant au moins une triple liaison C≡C.
+alcool :: Composé organique portant un groupe hydroxyle –OH sur un carbone saturé.
+aldéhyde :: Composé carbonylé dont le groupe C=O est en bout de chaîne carbonée.
+cétone :: Composé carbonylé dont le groupe C=O est lié à deux atomes de carbone.
+acide carboxylique :: Composé organique portant le groupe –COOH.
+ester :: Composé organique de groupe –COO–, obtenu à partir d'un acide carboxylique et d'un alcool.
+amine :: Composé organique dérivé de l'ammoniac, où des H sont remplacés par des groupes carbonés.
+amide :: Composé organique portant le groupe –CO–N<.
+éther-oxyde|éther :: Composé organique de formule R–O–R'.
+groupe fonctionnel|groupe caractéristique :: Atome ou groupe d'atomes qui détermine les propriétés chimiques d'une famille de composés.
+isomère :: Molécule de même formule brute qu'une autre mais de structure différente.
+chiralité :: Propriété d'une molécule non superposable à son image dans un miroir.
+énantiomère :: Isomère chiral, image miroir non superposable d'une autre molécule.
+carbone asymétrique :: Atome de carbone lié à quatre groupes différents.
+polymère :: Macromolécule formée par l'enchaînement de nombreux motifs identiques ou voisins.
+monomère :: Petite molécule qui, par réactions successives, forme un polymère.
+polymérisation :: Réaction qui assemble des monomères en un polymère.
+estérification :: Réaction entre un acide carboxylique et un alcool qui forme un ester et de l'eau.
+saponification :: Hydrolyse basique d'un ester qui donne un alcool et un carboxylate, notamment pour fabriquer du savon.
+hydrolyse :: Réaction de décomposition d'une espèce chimique par l'eau.
+nucléophile :: Espèce riche en électrons qui attaque un site pauvre en électrons.
+électrophile :: Espèce pauvre en électrons qui attaque un site riche en électrons.
+radical :: Espèce chimique possédant un électron non apparié, très réactive.
+allotrope :: Se dit des formes physiques différentes d'un même élément, comme le diamant et le graphite pour le carbone.
+distillation :: Séparation de liquides miscibles selon leurs températures d'ébullition.
+filtration :: Séparation d'un solide d'un liquide à l'aide d'un filtre.
+décantation :: Séparation de deux liquides non miscibles ou d'un solide déposé et d'un liquide.
+chromatographie :: Méthode de séparation et d'identification d'espèces selon leur affinité pour une phase mobile et une phase fixe.
+cristallisation :: Formation d'un solide cristallin à partir d'un liquide ou d'une solution.
+sublimation :: Passage direct de l'état solide à l'état gazeux.
+condensation :: Passage de l'état gazeux à l'état liquide.
+fusion :: Passage de l'état solide à l'état liquide.
+osmose :: Passage de solvant à travers une membrane semi-perméable vers la solution la plus concentrée.
+émulsion :: Dispersion de fines gouttelettes d'un liquide dans un autre liquide non miscible.
+colloïde :: Mélange où des particules très fines restent dispersées sans se déposer.
+gaz parfait :: Modèle de gaz dont les particules sont sans interaction, vérifiant PV = nRT.
+radioactivité :: Désintégration spontanée de noyaux instables avec émission de rayonnements.
+demi-vie|temps de demi-vie :: Durée au bout de laquelle la moitié des noyaux radioactifs d'un échantillon s'est désintégrée.
+fission nucléaire :: Cassure d'un noyau lourd en deux noyaux plus légers avec libération d'énergie.
+fusion nucléaire :: Union de deux noyaux légers en un noyau plus lourd avec libération d'énergie.
+spectroscopie :: Étude des espèces chimiques par l'analyse de leur interaction avec un rayonnement.
+burette :: Verrerie graduée à robinet servant à verser un volume précis de liquide, notamment en titrage.
+pipette jaugée :: Verrerie prélevant avec précision un volume unique de liquide.
+fiole jaugée :: Récipient à col étroit, marqué d'un trait de jauge, servant à préparer une solution de volume précis.
+erlenmeyer :: Flacon conique à col étroit utilisé pour les réactions et les titrages.
+ampoule à décanter :: Verrerie à robinet servant à séparer deux liquides non miscibles.
+bécher :: Récipient cylindrique gradué servant à contenir et chauffer des liquides.`;
+
+const $=id=>document.getElementById(id);
+const load=()=>{try{return JSON.parse(localStorage.getItem('cnh')||'[]')}catch(e){return[]}};
+let custom=load();
+const parse=l=>{const i=l.indexOf('::');return i<0?null:{t:l.slice(0,i).trim(),d:l.slice(i+2).trim()}};
+const all=()=>BASE.split('\n').map(parse).filter(Boolean).concat(custom);
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/^(le |la |les |l'|un |une |des )/,'').replace(/[^a-z0-9]/g,'');
+const save=()=>localStorage.setItem('cnh',JSON.stringify(custom));
+
+function tab(id,btn){document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));$(id).classList.add('on');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');if(id!=='ch')stop();}
+
+function render(){
+  const q=norm($('s').value),a=all().sort((x,y)=>x.t.localeCompare(y.t,'fr'));
+  const f=a.filter(e=>!q||norm(e.t).includes(q)||norm(e.d).includes(q));
+  $('n').textContent=f.length+' / '+a.length+' termes';
+  $('list').innerHTML=f.map(e=>`<div class="c"><b>${e.t.split('|')[0]}</b><br>${e.d}</div>`).join('');
+  $('mine').innerHTML=custom.length?custom.map((e,i)=>`<div class="c"><b>${e.t}</b> <small>${e.d}</small><br><button class="b g" onclick="del(${i})">Supprimer</button></div>`).join(''):'<small>Aucun pour l\'instant.</small>';
+}
+$('s').oninput=render;
+function addOne(){const t=$('nt').value.trim(),d=$('nd').value.trim();if(!t||!d)return;custom.push({t,d});save();$('nt').value=$('nd').value='';render();}
+function addBulk(){const n=$('bulk').value.split('\n').map(parse).filter(e=>e&&e.t&&e.d);custom=custom.concat(n);save();$('bulk').value='';render();alert(n.length+' terme(s) ajouté(s)');}
+function del(i){custom.splice(i,1);save();render();}
+
+// --- Challenge ---
+let snd=true,ac,loop,tick,left,score,bag=[],cur,miss=[],running=false;
+function toggleSnd(){snd=!snd;$('snd').textContent='🔊 Son : '+(snd?'oui':'non');}
+function music(){
+  if(!snd)return;
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state==='suspended')ac.resume();
+  const notes=[110,110,165,110,131,110,165,196];let i=0;
+  loop=setInterval(()=>{const o=ac.createOscillator(),g=ac.createGain();
+    o.type='triangle';o.frequency.value=notes[i++%8];g.gain.value=.05;
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.22);
+    o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.22);},230);
+}
+function next(){
+  if(!bag.length)bag=all().sort(()=>Math.random()-.5);
+  cur=bag.pop();$('q').textContent=cur.d;$('a').value='';$('a').focus();
+}
+function play(){
+  score=0;left=60;miss=[];bag=[];running=true;
+  $('start').style.display=$('end').style.display='none';$('game').style.display='block';
+  $('sc').textContent=0;$('tm').textContent=60;$('fb').innerHTML='';
+  next();music();
+  tick=setInterval(()=>{left--;$('tm').textContent=left;if(left<=0)finish();},1000);
+}
+function stop(){clearInterval(tick);clearInterval(loop);running=false;}
+function submit(){
+  if(!running)return;
+  const v=norm($('a').value);if(!v)return;
+  const ok=cur.t.split('|').some(x=>norm(x)===v);
+  if(ok){score++;$('sc').textContent=score;$('fb').innerHTML='<span class="ok">✓ Correct</span>';}
+  else{miss.push(cur);$('fb').innerHTML='<span class="ko">✗ C\'était : '+cur.t.split('|')[0]+'</span>';}
+  next();
+}
+function skip(){miss.push(cur);$('fb').innerHTML='<span class="ko">Passé : '+cur.t.split('|')[0]+'</span>';next();}
+$('a').addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+function finish(){
+  stop();$('game').style.display='none';$('end').style.display='block';
+  $('end').innerHTML=`<b>Temps écoulé !</b><p class="t">${score} bonne(s) réponse(s)</p>
+  ${miss.length?'<b>À revoir :</b>'+miss.map(m=>`<p><b>${m.t.split('|')[0]}</b><br><small>${m.d}</small></p>`).join(''):'<p>Aucune erreur 🎉</p>'}
+  <button class="b" onclick="play()">↻ Rejouer</button>`;
+}
+render();
+</script>
+</body>
+</html>
